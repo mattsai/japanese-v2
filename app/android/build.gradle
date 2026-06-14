@@ -3,8 +3,8 @@
 buildscript {
     
     repositories {
-        maven { url 'https://dockerhub-phx.oci.oraclecorp.com/artifactory/maven-google' }
-        maven { url 'https://dockerhub-phx.oci.oraclecorp.com/artifactory/remote-repos' }
+        google()
+        mavenCentral()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.7.2'
@@ -18,8 +18,8 @@ apply from: "variables.gradle"
 
 allprojects {
     repositories {
-        maven { url 'https://dockerhub-phx.oci.oraclecorp.com/artifactory/maven-google' }
-        maven { url 'https://dockerhub-phx.oci.oraclecorp.com/artifactory/remote-repos' }
+        google()
+        mavenCentral()
     }
 }
 
