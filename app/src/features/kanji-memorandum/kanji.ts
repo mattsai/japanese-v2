@@ -127,7 +127,7 @@ export function createKanjiMemorandumExercises(
 ): KanjiMemorandumExercise[] {
   return items.map((item, index) => {
     const distractors = collectKanjiDistractors(items, index);
-    const choices = shuffleStable([
+    const choices = shuffle([
       toChoice(item),
       ...distractors.map(toChoice),
     ]);
@@ -186,16 +186,35 @@ function collectKanjiDistractors(
   items: KanjiMemorandumItem[],
   index: number,
 ): KanjiMemorandumItem[] {
-  const offsets = [1, 7, 17];
-  return offsets.map((offset) => items[(index + offset) % items.length]);
-}
+  const correct = items[index];
+  const pool = shuffle(items.filter((_, i) => i !== index));
+  const picked: KanjiMemorandumItem[] = [];
+  const usedMeanings = new Set([correct.meaningEs]);
 
-function shuffleStable<T>(items: T[]): T[] {
-  if (items.length < 4) {
-    return items;
+  for (const candidate of pool) {
+    // avoid duplicate meaning labels so there is only ever one valid answer
+    if (usedMeanings.has(candidate.meaningEs)) {
+      continue;
+    }
+    usedMeanings.add(candidate.meaningEs);
+    picked.push(candidate);
+    if (picked.length === 3) {
+      break;
+    }
   }
 
-  return [items[1], items[3], items[0], items[2]];
+  return picked;
+}
+
+function shuffle<T>(items: T[]): T[] {
+  const copy = [...items];
+
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+
+  return copy;
 }
 
 function buildInfo(item: KanjiMemorandumItem): string {

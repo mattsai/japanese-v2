@@ -1,159 +1,65 @@
 import {
-  conjugateNounModifier,
-  conjugatePredicate,
-  generateAdjectiveExercise,
   n5AdjectiveCatalog,
   type AdjectiveCatalogEntry,
-  type AdjectiveExerciseRequest,
-  type AdjectivePolarity,
-  type AdjectivePoliteness,
-  type AdjectiveTense,
 } from "@/features/adjective-practice";
-import type { StudyExercise } from "./types";
+import type { StudyChoice, StudyExercise } from "./types";
 
-const tenses: AdjectiveTense[] = ["present", "past"];
-const polarities: AdjectivePolarity[] = ["affirmative", "negative"];
-const politenesses: AdjectivePoliteness[] = ["formal", "informal"];
-const nounTargets = [
-  { japanese: "ほん", meaningEs: "libro" },
-  { japanese: "ひと", meaningEs: "persona" },
-] as const;
-
+// Reconocimiento puro: muestra el adjetivo y eliges su significado.
+// SIN conjugaciones (eso es solo para verbos).
 export function createAdjectiveStudyExercises(): StudyExercise[] {
-  return n5AdjectiveCatalog.flatMap((adjective) => {
-    const predicateRequests = tenses.flatMap((tense) =>
-      polarities.flatMap((polarity) =>
-        politenesses.map((politeness): AdjectiveExerciseRequest => ({
-          adjectiveId: adjective.id,
-          tense,
-          polarity,
-          politeness,
-          use: "predicate",
-        })),
-      ),
-    );
-    const nounRequests: AdjectiveExerciseRequest[] = [
-      {
-        adjectiveId: adjective.id,
-        tense: "present",
-        polarity: "affirmative",
-        politeness: "informal",
-        use: "noun-modifying",
-        noun: nounTargets[0],
-      },
-      {
-        adjectiveId: adjective.id,
-        tense: "past",
-        polarity: "negative",
-        politeness: "informal",
-        use: "noun-modifying",
-        noun: nounTargets[1],
-      },
-    ];
-
-    return [...predicateRequests, ...nounRequests].map(toStudyExercise);
-  });
+  return n5AdjectiveCatalog.map((adjective) => toRecognitionExercise(adjective));
 }
 
-function toStudyExercise(request: AdjectiveExerciseRequest): StudyExercise {
-  const exercise = generateAdjectiveExercise(request);
-  const displayAnswer = buildKanaAnswer(exercise.adjective, request);
-  const choices = buildChoices(displayAnswer);
+function toRecognitionExercise(adjective: AdjectiveCatalogEntry): StudyExercise {
+  const kindLabel = adjective.kind === "i" ? "i-adjetivo" : "na-adjetivo";
+  const choices = buildMeaningChoices(adjective);
 
   return {
-    id: exercise.id,
+    id: `adj-recognition-${adjective.id}`,
     section: "adjectives",
     title: "Adjetivo N5",
-    subtitle: buildSubtitle(request),
-    details: buildAdjectiveDetails(request),
-    promptEs: request.use === "noun-modifying"
-      ? "Elige la forma correcta antes del sustantivo."
-      : "Elige la forma correcta del adjetivo.",
-    japanese: exercise.adjective.reading,
-    reading: exercise.adjective.reading,
-    romaji: exercise.adjective.romaji,
+    subtitle: kindLabel,
+    details: [{ label: "Tipo", value: kindLabel }],
+    promptEs: "¿Qué significa este adjetivo?",
+    japanese: adjective.japanese,
+    reading: adjective.reading,
+    romaji: adjective.romaji,
     choices,
-    correctChoiceId: "correct",
-    hint: [
-      `lectura: ${exercise.adjective.reading} (${exercise.adjective.romaji})`,
-      ...exercise.hints.map((hint) => `${hint.label}: ${hint.value}`),
-    ].join(" | "),
-    info: `Hay ${n5AdjectiveCatalog.length} adjetivos aqui. Este es ${exercise.adjective.kind === "i" ? "i-adjetivo" : "na-adjetivo"}.`,
-    explanation: exercise.explanationEs,
+    correctChoiceId: adjective.id,
+    hint: `lectura: ${adjective.reading} (${adjective.romaji})`,
+    info: `${kindLabel}. Hay ${n5AdjectiveCatalog.length} adjetivos para reconocer.`,
+    explanation: `${adjective.japanese} (${adjective.reading}) significa ${adjective.meaningEs}.`,
   };
 }
 
-function buildKanaAnswer(
-  adjective: AdjectiveCatalogEntry,
-  request: AdjectiveExerciseRequest,
-) {
-  const kanaAdjective = {
-    ...adjective,
-    japanese: adjective.reading,
-  };
+function buildMeaningChoices(adjective: AdjectiveCatalogEntry): StudyChoice[] {
+  const distractors: StudyChoice[] = [];
+  const usedMeanings = new Set([adjective.meaningEs]);
 
-  if (request.use === "noun-modifying") {
-    return `${conjugateNounModifier(kanaAdjective, request)}${request.noun?.japanese ?? nounTargets[0].japanese}`;
+  for (const candidate of shuffle(n5AdjectiveCatalog)) {
+    if (usedMeanings.has(candidate.meaningEs)) {
+      continue;
+    }
+    usedMeanings.add(candidate.meaningEs);
+    distractors.push({ id: candidate.id, label: candidate.meaningEs });
+    if (distractors.length === 3) {
+      break;
+    }
   }
 
-  return conjugatePredicate(kanaAdjective, request);
+  return shuffle([
+    { id: adjective.id, label: adjective.meaningEs },
+    ...distractors,
+  ]);
 }
 
-function buildChoices(correctAnswer: string) {
-  const distractors = [
-    `${correctAnswer}です`,
-    correctAnswer.replace(/です$/, ""),
-    `${correctAnswer}じゃない`,
-  ].filter((choice, index, all) => choice !== correctAnswer && all.indexOf(choice) === index);
+function shuffle<T>(items: readonly T[]): T[] {
+  const copy = [...items];
 
-  return [
-    {
-      id: "correct",
-      label: correctAnswer,
-      info: "Esta opcion coincide con el objetivo del prompt.",
-    },
-    ...distractors.slice(0, 3).map((label, index) => ({
-      id: `distractor-${index + 1}`,
-      label,
-      info: "Pista: revisa si es pasado, negativo, formal/informal o si va antes del sustantivo.",
-    })),
-  ];
-}
-
-function buildSubtitle(request: AdjectiveExerciseRequest) {
-  const useLabel = request.use === "noun-modifying" ? "antes de sustantivo" : "predicado";
-  return `${useLabel} | ${tenseLabels[request.tense]} | ${polarityLabels[request.polarity]} | ${politenessLabels[request.politeness]}`;
-}
-
-function buildAdjectiveDetails(request: AdjectiveExerciseRequest) {
-  const details = [
-    { label: "Tiempo", value: tenseLabels[request.tense] },
-  ];
-
-  if (request.polarity === "negative") {
-    details.push({ label: "Tipo", value: "negativo" });
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
   }
 
-  if (request.use === "noun-modifying") {
-    details.push({ label: "Va", value: "antes del sustantivo" });
-  } else {
-    details.push({ label: "Modo", value: politenessLabels[request.politeness] });
-  }
-
-  return details;
+  return copy;
 }
-
-const tenseLabels: Record<AdjectiveTense, string> = {
-  present: "presente",
-  past: "pasado",
-};
-
-const polarityLabels: Record<AdjectivePolarity, string> = {
-  affirmative: "afirmativo",
-  negative: "negativo",
-};
-
-const politenessLabels: Record<AdjectivePoliteness, string> = {
-  formal: "formal",
-  informal: "informal",
-};
