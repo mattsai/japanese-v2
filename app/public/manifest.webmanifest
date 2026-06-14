@@ -1,0 +1,25 @@
+{
+  "name": "Kawaii Nihongo owo - Narumero",
+  "short_name": "Narumero",
+  "description": "JLPT N5 study space with cute verb, adjective and kanji practice.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2faff",
+  "theme_color": "#78bdeb",
+  "icons": [
+    {
+      "src": "/kawaii-nihongo-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/kawaii-nihongo-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
