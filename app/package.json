@@ -9,6 +9,8 @@
     "build:android": "npm run build && npm run sync:android",
     "apk:debug": "cd android && .\\gradlew.bat assembleDebug",
     "install:android": "cd android && .\\gradlew.bat installDebug",
+    "deploy": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-android.ps1",
+    "install:apk": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-apk.ps1",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run"
